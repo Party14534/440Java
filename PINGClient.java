@@ -7,6 +7,18 @@ import java.net.DatagramSocket;
 
 public class PINGClient {
 
+    public static int seqNum = 1;
+    public static int pingReqPackets = 0;
+    public static int pingResPackets = 0;
+    public static double minRTT = Double.MAX_VALUE;
+    public static double maxRTT = Double.MIN_VALUE;
+    public static double avgRTT = 0;
+    public static double totalRTT = 0;
+    public static double avgPayload = 0;
+    public static double totalLoad = 0;
+    public static int numRTT = 0;
+    public static int numPayload = 0;
+
     public static String buildMsg(int i, int ClientID, String timeStamp, String hostname){
 
         String rest = Integer.toHexString((int)Math.floor(Math.random() * (6553500) + 1));
@@ -40,7 +52,7 @@ public class PINGClient {
         return msg;
     }
     
-    public static boolean sendPacket(DatagramSocket socket, DatagramPacket packet, int wait) throws IOException{
+    public static boolean sendPacket(DatagramSocket socket, DatagramPacket packet, int wait, int loadSize) throws IOException{
 
         socket.send(packet);
 
@@ -56,6 +68,10 @@ public class PINGClient {
                 socket.receive(receivePacket);
                 String returnData = new String(buffer);
                 System.out.println(returnData);
+                totalLoad += loadSize;
+                numPayload++;
+                avgPayload = totalLoad/numPayload;
+                pingResPackets++;
                 break;
 
             } catch (SocketTimeoutException e){
@@ -71,11 +87,12 @@ public class PINGClient {
 
         //Throwing error
         if(args.length != 5){
-            System.out.println("Input only 5 arguments");
+            System.out.println("ERR: " + args.length);
             return;
         }
 
         InetAddress IP = InetAddress.getByName(args[0]);
+        IP = InetAddress.getByName(IP.getHostAddress());
         int port = Integer.parseInt(args[1]);
         int clientID = Integer.parseInt(args[2]);
         int packets = Integer.parseInt(args[3]);
@@ -95,24 +112,41 @@ public class PINGClient {
         byte buffer[] = null;
 
         NumberFormat formatter = new DecimalFormat("#0.000");
-        double timeStamp = ((double)System.currentTimeMillis())/1000.0;
-        String timeStampString = formatter.format(timeStamp);
 
-        for(int i = 0; i < packets; i++){
+        while(seqNum < packets+1){
 
-            String msg = buildMsg(i, clientID, timeStampString, args[0]);
+            pingReqPackets++;
+
+            double timeStamp = ((double)System.currentTimeMillis())/1000.0;
+            String timeStampString = formatter.format(timeStamp);
+
+            String msg = buildMsg(seqNum, clientID, timeStampString, args[0]);
             System.out.println(msg);
 
             buffer = msg.getBytes();
 
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length, IP, port);
 
-            if(sendPacket(socket, packet, wait)) break;
+            if(sendPacket(socket, packet, wait, msg.getBytes().length)){
+                seqNum++;
+                double RTT = (((double)System.currentTimeMillis())/1000.0) - timeStamp;
+                String RTTS = formatter.format((((double)System.currentTimeMillis())/1000.0) - timeStamp);
+                totalRTT += RTT;
+                numRTT++;
+                avgRTT = totalRTT/numRTT;
+                System.out.println("RTT: " + RTTS);
+                if(RTT > maxRTT) maxRTT = RTT;
+                if(RTT < minRTT) minRTT = RTT;
+            }
 
-        }    
-
-        String RTT = formatter.format((((double)System.currentTimeMillis())/1000.0) - timeStamp);
-        System.out.println("RTT: " + RTT);
+        }
+        String avgRTTS = formatter.format(avgRTT);
+        String minRTTS = formatter.format(minRTT);
+        String maxRTTS = formatter.format(maxRTT);
+        String avgPayloadS = formatter.format(avgPayload);
+        String lossRateS = formatter.format(((double)pingResPackets/(double)pingReqPackets));
+        System.out.println("Summary: " + pingReqPackets + " :: " + pingResPackets + " :: " + lossRateS +
+        " :: " + minRTTS + " :: " + maxRTTS + " :: " + avgRTTS + " :: " + avgPayloadS);
 
         socket.close();
 

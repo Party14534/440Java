@@ -5,45 +5,72 @@ import java.net.InetAddress;
 
 public class PINGServer{
 
-    public static void buildMsg(String msg, int ClientID, int seqNum){
+     
+    public static int clientID = 0;
+    public static int seqNum = 0;
+
+    public static void getVals(String msg){
 
         int lineBreakCount = 0;
         int spaceCount = 0;
         String idStr = "";
+        String seqStr = "";
         for(int i = 0; i < msg.length(); i++){
             if(msg.charAt(i) == '\n'){ lineBreakCount++; continue;}
+
+            spaceCount = 0;
             
             if(lineBreakCount == 2){
                 while(spaceCount < 3){
                     if(msg.charAt(i) == ' '){spaceCount++; i++;}
-                    if(msg.charAt(i) == '\n') {lineBreakCount++; break;}
+                    if(msg.charAt(i) == '\n') {lineBreakCount++; i++; break;}
                     else if(spaceCount == 2) idStr += msg.charAt(i);
+                    i++;
+                }
+            }
+            spaceCount = 0;
+            if(lineBreakCount == 3){
+                while(spaceCount < 3){
+                    if(msg.charAt(i) == ' '){spaceCount++; i++;}
+                    if(msg.charAt(i) == '\n') {lineBreakCount++; i++; break;}
+                    else if(spaceCount == 2) seqStr += msg.charAt(i);
                     i++;
                 }
             }
 
         }
 
-        System.out.println(idStr);
-        ClientID = Integer.parseInt(idStr);
+        clientID = Integer.parseInt(idStr);
+        seqNum = Integer.parseInt(seqStr);
 
     }
 
-    public static void sendResponse(DatagramSocket socket, DatagramPacket receivePacket, byte[] buffer) throws IOException{
-
-        int clientID = 3332;
-        int seqNum = 0;
+    public static void sendResponse(DatagramSocket socket, DatagramPacket receivePacket, byte[] buffer, boolean accepted) throws IOException{
 
         String data = new String(buffer);
         data = data.substring(0, data.indexOf('\0'));
 
+        String error;
+        if(accepted) error = "RECEIVED";
+        else error = "DROPPED";
+
         System.out.println(data);
 
-        buildMsg(data, clientID, seqNum);
+        getVals(data);
         System.out.println("IP:" + receivePacket.getAddress() + " :: Port:" + receivePacket.getPort() +
-        " :: ClientID:" + clientID + " :: SEQ#:" + seqNum + " :: RECEIVED");
+        " :: ClientID:" + clientID + " :: SEQ#:" + seqNum + " :: " + error);
+
+        if(!accepted) return;
 
         byte[] sBuffer = null;
+
+        String msgLines[] = data.split("\n",100);
+        msgLines[0] = "---------- Ping Response Packet Header ----------";
+        msgLines[6] = "---------- Ping Response Packet Payload ----------";
+        data = "";
+        for(int i = 0; i < msgLines.length; i++) data += msgLines[i] + "\n";
+
+        data = data.toUpperCase();
 
         sBuffer = data.getBytes();
 
@@ -80,8 +107,8 @@ public class PINGServer{
             receivePacket = new DatagramPacket(buffer, buffer.length);
             socket.receive(receivePacket);
             int randNumber = (int)Math.floor(Math.random() * (100));
-            if(loss > randNumber)sendResponse(socket, receivePacket, buffer);
-            else System.out.println("Packet dropped due to loss: " + randNumber + " > " + loss);
+            if(loss > randNumber) sendResponse(socket, receivePacket, buffer, true);
+            else sendResponse(socket, receivePacket, buffer, false);
 
         }
 
