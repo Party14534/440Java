@@ -54,7 +54,7 @@ public class PINGServer{
         if(accepted) error = "RECEIVED";
         else error = "DROPPED";
 
-        System.out.println(data);
+        System.out.println("DATA: " + data);
 
         getVals(data);
         System.out.println("IP:" + receivePacket.getAddress() + " :: Port:" + receivePacket.getPort() +

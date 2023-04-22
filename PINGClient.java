@@ -21,33 +21,31 @@ public class PINGClient {
 
     public static String buildMsg(int i, int ClientID, String timeStamp, String hostname){
 
-        String rest = Integer.toHexString((int)Math.floor(Math.random() * (6553500) + 1));
+        int payloadSize = (int)Math.floor(Math.random() * (300 - 200 + 1) + 200);
+        String payload = "Host: " + hostname + "\n" +
+        "Class-name: VCU-CMSC440-SPRING-2023\n" +
+        "User-name: Dellimore, Zachariah\n" +
+        "Rest: ";
+        int bits = payloadSize - payload.getBytes().length;
+        String rest = "";
+        for(int j = 0; j < bits; j++){
+            int randNum = (int)Math.floor(Math.random() * (36));
+            if(randNum >= 10) randNum+=39;
+            randNum+=48;
+        
+            rest += (char)randNum;
+        }
+        rest += "\n\0";
+
 
         String msg = "---------- Ping Request Packet Header ----------\n" +
         "Version: 1\n"+
         "Client ID: " + ClientID + "\n" +
         "Sequence No.: " + i + "\n" +
         "Time: " + timeStamp + "\n" +
-        "Payload Size: \n" +
-        "--------- Ping Request Packet Payload ------------\n" +
-        "Host: " + hostname + "\n" +
-        "Class-name: VCU-CMSC440-SPRING-2023\n" +
-        "User-name: Dellimore, Zachariah\n" +
-        "Rest: " + rest + "\n";
-
-        int payloadSize = msg.getBytes().length + 3;
-
-        msg = "---------- Ping Request Packet Header ----------\n" +
-        "Version: 1\n"+
-        "Client ID: " + ClientID + "\n" +
-        "Sequence No.: " + i + "\n" +
-        "Time: " + timeStamp + "\n" +
         "Payload Size: " + payloadSize + "\n" +
         "--------- Ping Request Packet Payload ------------\n" +
-        "Host: " + hostname + "\n" +
-        "Class-name: VCU-CMSC440-SPRING-2023\n" +
-        "User-name: Dellimore, Zachariah\n" +
-        "Rest: " + rest + "\n";
+        payload + rest;
 
         return msg;
     }
