@@ -19,76 +19,87 @@ public class PINGClient {
     public static int numRTT = 0;
     public static int numPayload = 0;
 
+    //Function that builds the send packet
     public static String buildMsg(int i, int ClientID, String timeStamp, String hostname){
 
-        int payloadSize = (int)Math.floor(Math.random() * (300 - 200 + 1) + 200);
-        String payload = "Host: " + hostname + "\n" +
+        int payloadSize = (int)Math.floor(Math.random() * (300 - 150 + 1) + 150); //Gets random payload size
+        String payload = "--------- Ping Request Packet Payload ------------\n" +
+        "Host: " + hostname + "\n" +
         "Class-name: VCU-CMSC440-SPRING-2023\n" +
         "User-name: Dellimore, Zachariah\n" +
-        "Rest: ";
-        int bits = payloadSize - payload.getBytes().length;
-        String rest = "";
+        "Rest: "; //Creates default payload packet without rest
+        String payloadEnd = "---------------------------------------\0";
+
+        int bits = payloadSize - payload.getBytes().length; //Gets the number of bits that need to be added
+
+        String rest = ""; //String that will hold the rest
+
+        //For loop that generates a random alpha character
         for(int j = 0; j < bits; j++){
-            int randNum = (int)Math.floor(Math.random() * (36));
-            if(randNum >= 10) randNum+=39;
+            int randNum = (int)Math.floor(Math.random() * (62));
+            if(randNum >= 36) randNum+=6;
+            if(randNum >= 10) randNum+=7;
             randNum+=48;
         
             rest += (char)randNum;
         }
-        rest += "\n\0";
+        rest+="\n";
 
-
+        //Adds payload and randdom chars to packets
         String msg = "---------- Ping Request Packet Header ----------\n" +
         "Version: 1\n"+
         "Client ID: " + ClientID + "\n" +
         "Sequence No.: " + i + "\n" +
         "Time: " + timeStamp + "\n" +
         "Payload Size: " + payloadSize + "\n" +
-        "--------- Ping Request Packet Payload ------------\n" +
-        payload + rest;
+        payload + rest + payloadEnd;
 
         return msg;
     }
     
+    //Returns true if packet sent successfully
     public static boolean sendPacket(DatagramSocket socket, DatagramPacket packet, int wait, int loadSize) throws IOException{
 
-        socket.send(packet);
+        socket.send(packet); //Sends packet on socket
 
-        socket.setSoTimeout(wait*1000);
+        socket.setSoTimeout(wait*1000); //Sets the sockets timeour
 
 
-        byte[] buffer = new byte[65535];
+        byte[] buffer = new byte[65535]; //Creates message buffer
 
-        DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length);
+        DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length); //Creates a receive packet
 
-        while(true){
-            try{
-                socket.receive(receivePacket);
-                String returnData = new String(buffer);
-                System.out.println(returnData);
-                totalLoad += loadSize;
-                numPayload++;
-                avgPayload = totalLoad/numPayload;
-                pingResPackets++;
-                break;
-
-            } catch (SocketTimeoutException e){
-                return false;
+        //Try catch loop that tries to receive until there is a timeout
+        try{
+            socket.receive(receivePacket); //Receives packet
+            String returnData = new String(buffer);
+            String msgLines[] = returnData.split("\n",100);
+            for(int i = 0; i < msgLines.length; i++){ //Prints out packet
+                if(i != 0 && i != 6)System.out.println(msgLines[i]);
             }
+            //Updates global statistic variables
+            totalLoad += loadSize;
+            numPayload++;
+            avgPayload = totalLoad/numPayload;
+            pingResPackets++;
+            return true;
+
+        } catch (SocketTimeoutException e){
+            //If the socket timeout it returns false
+            return false;
         }
-
-
-        return true;
+        
     }
 
     public static void main(String[] args) throws IOException{
 
-        //Throwing error
+        //Throwing error if there are not 5 arguments
         if(args.length != 5){
-            System.out.println("ERR: " + args.length);
+            System.out.println("ERR: arg " + args.length);
             return;
         }
 
+        //Getting IP, port, clientID, number of packets, and wait time from the arguments
         InetAddress IP = InetAddress.getByName(args[0]);
         IP = InetAddress.getByName(IP.getHostAddress());
         int port = Integer.parseInt(args[1]);
@@ -96,48 +107,63 @@ public class PINGClient {
         int packets = Integer.parseInt(args[3]);
         int wait = Integer.parseInt(args[4]);
 
-        //Fill out error later
-        if(port < 0 || port > 65535) return;
+        //Throwing error if there is an invalid port number
+        if(port < 0 || port > 65535){
+            System.out.println("ERR: Invalid Port");
+            return;
+        }
 
-        //Printing out values
+        //Printing out values 
         System.out.println("PINGClient started with server IP: " + IP.toString().substring(1) +
         ", port: " + port + ", clientID: " + clientID + ", packets: " + packets
         + ", wait: " + wait);
 
+        //Creating socket
         DatagramSocket socket;
         socket = new DatagramSocket();
 
+        //Creating a byte buffer
         byte buffer[] = null;
 
+        //Number formatter used to make RTT values look better
         NumberFormat formatter = new DecimalFormat("#0.000");
 
+        //While loop that runs for as many packets you have
         while(seqNum < packets+1){
 
-            pingReqPackets++;
+            pingReqPackets++; //Increases number of ping packets sent
 
-            double timeStamp = ((double)System.currentTimeMillis())/1000.0;
-            String timeStampString = formatter.format(timeStamp);
+            double timeStamp = ((double)System.currentTimeMillis())/1000.0; //Gets current time
+            String timeStampString = formatter.format(timeStamp); //Sets current time to string a formats it
 
-            String msg = buildMsg(seqNum, clientID, timeStampString, args[0]);
-            System.out.println(msg);
+            String msg = buildMsg(seqNum, clientID, timeStampString, args[0]); //Builds message
+            System.out.println(msg); //Prints out the message
 
-            buffer = msg.getBytes();
+            buffer = msg.getBytes(); //sets buffer equal to msg
 
-            DatagramPacket packet = new DatagramPacket(buffer, buffer.length, IP, port);
+            DatagramPacket packet = new DatagramPacket(buffer, buffer.length, IP, port); //Creates packet
 
+            //Sends packet to host
             if(sendPacket(socket, packet, wait, msg.getBytes().length)){
-                seqNum++;
+
+                //Gets RTT
                 double RTT = (((double)System.currentTimeMillis())/1000.0) - timeStamp;
                 String RTTS = formatter.format((((double)System.currentTimeMillis())/1000.0) - timeStamp);
-                totalRTT += RTT;
+                totalRTT += RTT; //Updating gloabl statistic variables
                 numRTT++;
                 avgRTT = totalRTT/numRTT;
-                System.out.println("RTT: " + RTTS);
+                System.out.println("RTT: " + RTTS + " seconds");
                 if(RTT > maxRTT) maxRTT = RTT;
                 if(RTT < minRTT) minRTT = RTT;
+
+            } else{
+                System.out.println("--------------- Ping Response Packet Timed-Out ------------------");
             }
 
+            seqNum++;
         }
+
+        //Prints out statistics
         String avgRTTS = formatter.format(avgRTT);
         String minRTTS = formatter.format(minRTT);
         String maxRTTS = formatter.format(maxRTT);

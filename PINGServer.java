@@ -5,7 +5,6 @@ import java.net.InetAddress;
 
 public class PINGServer{
 
-     
     public static int clientID = 0;
     public static int seqNum = 0;
 
@@ -54,21 +53,27 @@ public class PINGServer{
         if(accepted) error = "RECEIVED";
         else error = "DROPPED";
 
-        System.out.println("DATA: " + data);
-
         getVals(data);
-        System.out.println("IP:" + receivePacket.getAddress() + " :: Port:" + receivePacket.getPort() +
+        System.out.println("IP:" + receivePacket.getAddress().toString().substring(1) + " :: Port:" + receivePacket.getPort() +
         " :: ClientID:" + clientID + " :: SEQ#:" + seqNum + " :: " + error);
+
+        String msgLines[] = data.split("\n",100);
+        for(int i = 0; i < msgLines.length; i++){
+            if(i != 0 && i != 6)System.out.println(msgLines[i]);
+            else if(i == 0) System.out.println("----------Received Ping Request Packet Header----------");
+            else if(i == 6) System.out.println("---------Received Ping Request Packet Payload------------");
+
+        }
 
         if(!accepted) return;
 
         byte[] sBuffer = null;
 
-        String msgLines[] = data.split("\n",100);
         msgLines[0] = "---------- Ping Response Packet Header ----------";
         msgLines[6] = "---------- Ping Response Packet Payload ----------";
         data = "";
         for(int i = 0; i < msgLines.length; i++) data += msgLines[i] + "\n";
+        System.out.println(data);
 
         data = data.toUpperCase();
 
@@ -84,18 +89,31 @@ public class PINGServer{
 
         //Throwing error
         if(args.length != 2){
-            System.out.println("Input only 2 arguments");
+            System.out.println("Err arg " + args.length);
             return;
         }
 
         int port = Integer.parseInt(args[0]);
         int loss = Integer.parseInt(args[1]);
 
-        System.out.println("PINGServer started with server IP: " + InetAddress.getLocalHost()
-        + ", port: " + port);
+        if(port < 0 || port > 65535){
+            System.out.println("ERR: Invalid Port");
+            return;
+        }
 
         DatagramSocket socket;
-        socket = new DatagramSocket(port);
+
+        try{
+
+            socket = new DatagramSocket(port);
+
+        } catch(IOException e){
+            System.out.println("ERR - cannot create PINGServer socket using port number " + port);
+            return;
+        }
+
+        System.out.println("PINGServer started with server IP: " + InetAddress.getLocalHost().toString().substring(0)
+        + ", port: " + port + " ...");
 
         byte[] buffer = new byte[65535];
         DatagramPacket receivePacket = null;
@@ -112,7 +130,7 @@ public class PINGServer{
 
         }
 
-        socket.close();
+        socket.close(); 
 
     }
 
