@@ -58,17 +58,17 @@ public class PINGServer{
         String msgLines[] = data.split("\n",0);
         for(int i = 0; i < msgLines.length; i++){
             if(i != 0 && i != 6)System.out.println(msgLines[i]);
-            else if(i == 0) System.out.println("----------Received Ping Request Packet Header----------");
-            else if(i == 6) System.out.println("---------Received Ping Request Packet Payload------------");
-
+            else if(i == 0) System.out.println("---------- Received Ping Request Packet Header ----------");
+            else if(i == 6) System.out.println("--------- Received Ping Request Packet Payload ------------");
         }
+        System.out.println();
 
         //Creates a send buffer
         byte[] sBuffer = null;
 
         //Sets dividing lines to reflect the sender
-        msgLines[0] = "---------- Ping Response Packet Header ----------";
-        msgLines[6] = "---------- Ping Response Packet Payload ----------";
+        msgLines[0] = "---------- Received Ping Response Packet Header ----------";
+        msgLines[6] = "---------- Received Ping Response Packet Payload ----------";
         data = "";
 
         //Rebuilds packet
@@ -89,7 +89,12 @@ public class PINGServer{
         }
 
         //Prints out new packet to be sent to client
-        System.out.println(data);
+        msgLines = data.split("\n",0);
+        for(int i = 0; i < msgLines.length; i++){
+            if(i != 6 && i != 0)System.out.println(msgLines[i]);
+            if(i == 0) System.out.println("---------- Ping Response Packet Header ----------");
+            if(i == 6) System.out.println("---------- Ping Response Packet Payload ----------");
+        }
 
         //Sets send buffer from msg
         sBuffer = data.getBytes();
@@ -134,7 +139,7 @@ public class PINGServer{
 
         //Prints out server info
         System.out.println("PINGServer started with server IP: " + InetAddress.getLocalHost().toString().substring(0)
-        + ", port: " + port + " ...");
+        + ", port: " + port + " ...\n");
 
         //Creates packet
         DatagramPacket receivePacket = null;

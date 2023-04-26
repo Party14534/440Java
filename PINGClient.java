@@ -86,7 +86,7 @@ public class PINGClient {
             //Prints out packet
             String msgLines[] = returnData.split("\n",0);
             for(int i = 0; i < msgLines.length; i++){ 
-                /*if(i != 0 && i != 6 && i != 11)*/System.out.print(msgLines[i]);
+                System.out.print(msgLines[i]);
                 if(i != 11) System.out.print("\n");
             }
 
@@ -125,7 +125,7 @@ public class PINGClient {
         //Printing out client values 
         System.out.println("PINGClient started with server IP: " + IP.toString().substring(1) +
         ", port: " + port + ", clientID: " + clientID + ", packets: " + packets
-        + ", wait: " + wait);
+        + ", wait: " + wait + "\n");
 
         //Creating socket
         DatagramSocket socket;
@@ -171,14 +171,14 @@ public class PINGClient {
                 if(RTT < minRTT) minRTT = RTT;
 
             } else{
-                System.out.println("--------------- Ping Response Packet Timed-Out ------------------");
+                System.out.println("--------------- Ping Response Packet Timed-Out ------------------\n");
             }
 
             seqNum++;
         }
 
         //Prints out statistics
-        //if(minRTT == Double.MAX_VALUE) minRTT = 0.000;
+        if(minRTT == Double.MAX_VALUE) minRTT = 0.000;
         String avgRTTS = formatter.format(avgRTT);
         String minRTTS = formatter.format(minRTT);
         String maxRTTS = formatter.format(maxRTT);
