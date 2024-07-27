@@ -1,4 +1,4 @@
-Zachariah Dellimore V#00980652
+Zachariah Dellimore V#********
 To compile the client program run: javac PINGClient.java 
 To compile the server program run: javac PINGServer.java
 To run the the client program run: java PINGClient <IP> <Port> <ClientID> <Number_of_ping_request_packets> <Wait>
